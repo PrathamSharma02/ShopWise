@@ -5,10 +5,11 @@ import Announcement from '../components/Announcement';
 import Footer from '../components/Footer';
 import { Add, Remove } from '@material-ui/icons';
 import { mobile } from '../responsive';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import StripeCheckout from "react-stripe-checkout";
 import { useNavigate } from 'react-router-dom';
 import {userRequest} from '../requestMethods';
+import { addProduct, deleteProduct } from "../redux/cartRedux"
 
 const KEY = process.env.REACT_APP_STRIPE;
 const Container=styled.div``;
@@ -103,6 +104,7 @@ const ProductAmountContainer=styled.div`
 display: flex;
 align-items:center;
 margin-bottom:20px;
+cursor: pointer;
 `;
 
 const ProductAmount=styled.div`
@@ -148,18 +150,46 @@ padding: 10px;
 background-color: black;
 color: white;
 font-weight:600;
+cursor:pointer;
 `;
 
 const Cart = () => {
     const cart = useSelector(state=>state.cart);
     const [stripeToken, setStripeToken] = useState(null);
      const navigate = useNavigate();
-  
+     const dispatch = useDispatch();
+
+     const handleAddToCart = (product) => {
+        dispatch(addProduct(product));
+      };
+    
+      const handleRemoveFromCart = (productId) => {
+        dispatch(deleteProduct(productId));
+      };
+
     const onToken = (token) => {
       setStripeToken(token);
     };
+    useEffect(() => {
+        const fetchCart = async () => {
+          try {
+            const res = await userRequest.post('/cart');
+            // Update the cart in the Redux store with the user-specific cart data
+            dispatch({ type: 'SET_CART', payload: res.data });
+          } catch (error) {
+            console.log(error);
+          }
+        };
+    
+        fetchCart();
+    }, [dispatch]);
     
 
+    const subtotal = cart.products.reduce(
+        (accumulator, product) => accumulator + product.price * product.quantity,
+        0
+      );
+      const total = subtotal;
     useEffect(()=>{
         const makeRequest = async ()=>{
             try{
@@ -168,7 +198,15 @@ const Cart = () => {
                     amount:500,
                     
                 });
-                navigate("/success", { state: { data: res.data } });
+                if (res.data.status === 'succeeded') {
+                    // Payment succeeded, navigate to the success page
+                    navigate('/success');
+                  } else {
+                    // Payment failed, handle the error (show an error message, etc.)
+                    console.log('Payment failed:', res.data);
+                    // ... (rest of the error handling code)
+                  }
+                //  navigate("/success", { state: { data: res.data } });
             }
             catch {}
         };
@@ -204,9 +242,13 @@ const Cart = () => {
                             </ProductDetail>
                             <PriceDetail>
                                 <ProductAmountContainer>
-                                    <Add/>
+                                <Remove onClick={() => handleRemoveFromCart(product._id)} />
+                                <ProductAmount>{product.quantity}</ProductAmount>
+                                <Add onClick={() => handleAddToCart(product)} />
+                  
+                                    {/* <Add/>
                                     <ProductAmount>{product.quantity}</ProductAmount>
-                                    <Remove/>
+                                    <Remove/> */}
                                 </ProductAmountContainer>
                                 <ProductPrice>₹{product.price*product.quantity}</ProductPrice>
                             </PriceDetail>
@@ -218,7 +260,7 @@ const Cart = () => {
                         <SummaryTitle>ORDER SUMMARY</SummaryTitle>
                         <SummaryItem>
                             <SummaryItemText>Subtotal</SummaryItemText>
-                            <SummaryItemPrice>₹{cart.total}</SummaryItemPrice>
+                            <SummaryItemPrice>₹{subtotal}</SummaryItemPrice>
                         </SummaryItem>
                         <SummaryItem>
                             <SummaryItemText>Estimated Shipping</SummaryItemText>
@@ -230,15 +272,15 @@ const Cart = () => {
                         </SummaryItem>
                         <SummaryItem type="total">
                             <SummaryItemText >Total</SummaryItemText>
-                            <SummaryItemPrice>₹{cart.total}</SummaryItemPrice>
+                            <SummaryItemPrice>₹{total}</SummaryItemPrice>
                         </SummaryItem>
                         <StripeCheckout
                           name="Sharma Shop"
                            image="https://avatars.githubusercontent.com/u/1486366?v=4"
                            billingAddress
                            shippingAddress
-                           description={`Your total is ₹${cart.total}`}
-                            amount={cart.total * 100}
+                           description={`Your total is ₹${total}`}
+                            amount={total * 100}
                            token={onToken}
                            stripeKey={KEY}
                            >

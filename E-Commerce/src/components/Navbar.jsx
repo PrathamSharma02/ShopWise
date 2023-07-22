@@ -3,8 +3,9 @@ import { Search, ShoppingCartOutlined } from '@material-ui/icons';
 import React from 'react';
 import styled from 'styled-components';
 import {mobile} from "../responsive";
-import {useSelector} from "react-redux";
-import { Link } from 'react-router-dom';
+import {useDispatch, useSelector} from "react-redux";
+import { Link, useNavigate } from 'react-router-dom';
+import { logout } from '../redux/userRedux';
 
 const Container = styled.div`
 height: 60px;
@@ -65,8 +66,20 @@ ${mobile({fontSize: "12px",marginLeft:"10px"})}
 `
 const Navbar = () => {
 
-  const quantity = useSelector(state=>state.cart.quantity);
-  const user = useSelector(state => state.user.username); // user state contains the user information
+  const user = useSelector(state => state.user.currentUser);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const cart = useSelector(state => state.cart);
+  const quantity = useSelector(state=>state.cart.totalItems);
+  const uniqueProductsCount = cart.products.length;
+
+  const handleLogout = () => {
+    // Dispatch the logout action to clear the user data from Redux store
+    dispatch(logout());
+    // Redirect to the home page or any other desired page after logout
+    navigate("/");
+  };
+  // const user = useSelector(state => state.user.username); // user state contains the user information
   return (
     <Container>
         <Wrapper>
@@ -81,24 +94,25 @@ const Navbar = () => {
         
         </Center>
         <Right>
-       
-            <MenuItem>Hello, {user}</MenuItem>
+        {user ? (
+            <>
+              <MenuItem>Hello, {user.username}</MenuItem>
+              <MenuItem onClick={handleLogout}>LOGOUT</MenuItem>
+            </>
+          ) : (
+            <>
               <Link to="/register">
                 <MenuItem>REGISTER</MenuItem>
               </Link>
               <Link to="/login">
                 <MenuItem>SIGN IN</MenuItem>
               </Link>
-          {/* <Link to = "/register">
-        <MenuItem>REGISTER</MenuItem>
-        </Link>
-        <Link to = "/login">
-        <MenuItem>SIGN IN</MenuItem>
-        </Link> */}
+            </>
+          )}
         <Link to= "/cart">
         
         <MenuItem>
-        <Badge badgeContent={quantity} color="primary">
+        <Badge badgeContent={uniqueProductsCount} color="primary">
         <ShoppingCartOutlined/>
         </Badge>
         </MenuItem>

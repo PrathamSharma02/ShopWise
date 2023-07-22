@@ -20,6 +20,7 @@ const updatedUser = await User.findByIdAndUpdate(req.params.id, {
    res.status(200).json(updatedUser);
    }
    catch(err){
+    console.error("Error updating user:", err);
     res.status(500).json(err);
    }
 
@@ -36,6 +37,14 @@ router.delete("/:id",verifyTokenAndAuthorization,async(req,res)=>{
         res.status(500).json(err);
     }
 });
+
+// LOGOUT
+router.post("/logout", (req, res) => {
+    // You can simply clear the session or token used for authentication
+    // In this case, let's clear the user session by removing the currentUser field
+    req.session.currentUser = null;
+    res.status(200).json("Logged out successfully.");
+  });
 
 //GET USER
 
